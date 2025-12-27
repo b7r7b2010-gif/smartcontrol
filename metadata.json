@@ -1,0 +1,7 @@
+{
+  "name": "إدارة الاختبارات الذكي - Smart Exam Management System",
+  "description": "نظام متكامل لإدارة الاختبارات المدرسية يشمل توزيع الطلاب، اللجان، الملاحظين، وتقارير الغياب عبر تقنيات QR والربط السحابي.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
