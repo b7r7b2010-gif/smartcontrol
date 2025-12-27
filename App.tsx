@@ -32,6 +32,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyA-zjjTrXJdXIX0z4SjGFwlu09KTZAZGRk",
   authDomain: "samrtcontrol.firebaseapp.com",
   projectId: "samrtcontrol",
+  databaseURL: "https://samrtcontrol-default-rtdb.firebaseio.com",
   storageBucket: "samrtcontrol.firebasestorage.app",
   messagingSenderId: "780118753476",
   appId: "1:780118753476:web:99061878f7909aa381c991"
@@ -132,7 +133,7 @@ const App: React.FC = () => {
 
   return (
     <div className="flex min-h-screen bg-slate-50 text-slate-900 font-sans">
-      <aside className="w-64 bg-slate-900 text-white flex-shrink-0 flex flex-col no-print transition-all">
+      <aside className="w-64 bg-slate-900 text-white flex-shrink-0 flex flex-col no-print transition-all border-l border-slate-800">
         <div className="p-8 flex items-center gap-3">
           <div className="bg-indigo-500 p-2.5 rounded-2xl shadow-lg shadow-indigo-500/20">
             <LayoutGrid size={24} />
@@ -155,7 +156,7 @@ const App: React.FC = () => {
             {isConnected ? <Cloud className="text-emerald-400" size={16} /> : <CloudOff className="text-red-400" size={16} />}
             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{isConnected ? 'Cloud Synced' : 'Offline'}</span>
           </div>
-          <span className="text-[10px] text-slate-600 font-black">V 3.0</span>
+          <span className="text-[10px] text-slate-600 font-black">V 3.1</span>
         </div>
       </aside>
 
@@ -167,7 +168,7 @@ const App: React.FC = () => {
               <input 
                 type="text" 
                 placeholder="ابحث عن طالب، لجنة، أو ملاحظ..." 
-                className="w-full pr-12 pl-4 py-3 bg-slate-100 border-none rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500 transition-all outline-none font-medium"
+                className="w-full pr-12 pl-4 py-3 bg-slate-100 border-none rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500 transition-all outline-none font-medium text-right"
               />
             </div>
           </div>
@@ -177,7 +178,7 @@ const App: React.FC = () => {
               <span className="absolute top-2.5 right-2.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
             </button>
             <div className="flex items-center gap-3 border-r pr-6 border-slate-100">
-               <div className="text-left hidden md:block">
+               <div className="text-right hidden md:block">
                   <div className="text-xs font-black text-slate-800">إدارة الكنترول</div>
                   <div className="text-[10px] font-bold text-emerald-500 uppercase">Administrator</div>
                </div>
