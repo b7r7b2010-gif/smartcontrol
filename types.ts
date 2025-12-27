@@ -24,9 +24,15 @@ export type Committee = {
   name: string;
   roomName: string;
   capacity: number;
-  assignedTeacherIds: string[]; // This might become per-session assignment
+  assignedTeacherIds: string[];
   studentIds: string[];
   examDayId?: string;
+};
+
+export type GradeExamConfig = {
+  subject: string;
+  startTime: string;
+  endTime: string;
 };
 
 export type ExamPeriod = {
@@ -34,10 +40,9 @@ export type ExamPeriod = {
   date: string;
   dayName: string;
   periodName: 'الفترة الأولى' | 'الفترة الثانية';
-  startTime: string;
-  endTime: string;
   isActive: boolean;
-  subjects: Record<string, string>; // Mapping grade level to subject name
+  // Mapping grade name to its specific config (subject + times)
+  gradeConfigs: Record<string, GradeExamConfig>;
 };
 
 export type AttendanceLog = {
