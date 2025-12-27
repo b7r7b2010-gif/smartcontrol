@@ -16,7 +16,8 @@ import {
   Users,
   Settings2,
   ListFilter,
-  Eraser
+  Eraser,
+  Phone
 } from 'lucide-react';
 import { Student } from '../types';
 import { generateId, sortByGradeLevel, readWorkbook, getSheetData, mapFieldsToStudents } from '../utils';
@@ -31,6 +32,7 @@ type ImportStep = 'idle' | 'selecting_sheet' | 'mapping' | 'preview';
 
 const StudentsManagement: React.FC<StudentsManagementProps> = ({ students, setStudents }) => {
   const [filterGrade, setFilterGrade] = useState('الكل');
+  const [searchQuery, setSearchQuery] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [importStep, setImportStep] = useState<ImportStep>('idle');
@@ -47,7 +49,23 @@ const StudentsManagement: React.FC<StudentsManagementProps> = ({ students, setSt
   });
   const [previewData, setPreviewData] = useState<Student[]>([]);
 
+  // استخراج الصفوف الفريدة للفلترة
   const grades = useMemo(() => ['الكل', ...Array.from(new Set(students.map(s => s.grade)))], [students]);
+
+  // الطلاب المفلترون والمرتبون (حسب الصف ثم أبجدياً)
+  const processedStudents = useMemo(() => {
+    let result = students;
+    
+    if (filterGrade !== 'الكل') {
+      result = result.filter(s => s.grade === filterGrade);
+    }
+    
+    if (searchQuery) {
+      result = result.filter(s => s.name.includes(searchQuery) || s.nationalId.includes(searchQuery));
+    }
+    
+    return sortByGradeLevel(result);
+  }, [students, filterGrade, searchQuery]);
 
   const handleClearDatabase = () => {
     if (window.confirm('⚠️ تحذير: هل أنت متأكد من مسح جميع بيانات الطلاب من القاعدة السحابية؟ لا يمكن التراجع عن هذا الإجراء.')) {
@@ -77,11 +95,12 @@ const StudentsManagement: React.FC<StudentsManagementProps> = ({ students, setSt
     setHeaders(excelHeaders);
     const autoMapping = { ...fieldMapping };
     excelHeaders.forEach(h => {
-      if (h.includes('اسم')) autoMapping.name = h;
-      if (h.includes('هوية') || h.includes('سجل') || h.includes('رقم الطالب')) autoMapping.nationalId = h;
-      if (h.includes('صف') || h.includes('مرحلة')) autoMapping.grade = h;
-      if (h.includes('فصل')) autoMapping.section = h;
-      if (h.includes('جوال')) autoMapping.phone = h;
+      const header = h.trim();
+      if (header.includes('اسم')) autoMapping.name = h;
+      if (header.includes('هوية') || header.includes('سجل') || header.includes('رقم الطالب')) autoMapping.nationalId = h;
+      if (header.includes('صف') || header.includes('مرحلة')) autoMapping.grade = h;
+      if (header.includes('فصل')) autoMapping.section = h;
+      if (header.includes('جوال') || header.includes('هاتف') || header.includes('موبايل')) autoMapping.phone = h;
     });
     setFieldMapping(autoMapping);
     setImportStep('mapping');
@@ -91,15 +110,14 @@ const StudentsManagement: React.FC<StudentsManagementProps> = ({ students, setSt
     if (!workbook || !selectedSheet) return;
     const rawData = getSheetData(workbook, selectedSheet);
     const mapped = mapFieldsToStudents(rawData, fieldMapping);
-    const sorted = sortByGradeLevel(mapped);
-    setPreviewData(sorted);
+    setPreviewData(mapped);
     setImportStep('preview');
   };
 
   const finalizeImport = () => {
     setStudents(prev => [...prev, ...previewData]);
     resetImport();
-    alert(`تم استيراد ${previewData.length} طالب بنجاح.`);
+    alert(`تم استيراد ${previewData.length} طالب بنجاح مع أرقام الجوال.`);
   };
 
   const resetImport = () => {
@@ -109,16 +127,12 @@ const StudentsManagement: React.FC<StudentsManagementProps> = ({ students, setSt
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const filteredStudents = filterGrade === 'الكل' 
-    ? students 
-    : students.filter(s => s.grade === filterGrade);
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-black text-slate-800">إدارة الطلاب سحابياً</h2>
-          <p className="text-slate-500 font-medium">البيانات مرتبطة بالخادم السحابي وتتحدث فورياً</p>
+          <h2 className="text-2xl font-black text-slate-800">إدارة الطلاب والبيانات</h2>
+          <p className="text-slate-500 font-medium">عرض مرتب حسب الصف وأبجدياً مع ربط الجوال سحابياً</p>
         </div>
         <div className="flex flex-wrap gap-3">
           <input type="file" ref={fileInputRef} onChange={handleFileSelect} accept=".xlsx, .xls" className="hidden" />
@@ -126,7 +140,7 @@ const StudentsManagement: React.FC<StudentsManagementProps> = ({ students, setSt
           <button 
             onClick={handleClearDatabase}
             className="p-3 bg-red-50 text-red-500 rounded-2xl hover:bg-red-500 hover:text-white transition-all border border-red-100 shadow-sm"
-            title="مسح قاعدة بيانات الطلاب"
+            title="تصفير قاعدة البيانات"
           >
             <Eraser size={22} />
           </button>
@@ -145,7 +159,7 @@ const StudentsManagement: React.FC<StudentsManagementProps> = ({ students, setSt
         </div>
       </div>
 
-      {/* Import Wizard Modal (Same logic as before) */}
+      {/* Import Wizard Modal */}
       {importStep !== 'idle' && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
           <div className="bg-white rounded-[2rem] w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
@@ -159,7 +173,7 @@ const StudentsManagement: React.FC<StudentsManagementProps> = ({ students, setSt
                {importStep === 'selecting_sheet' && (
                 <div className="space-y-8 py-10">
                   <div className="text-center space-y-2">
-                    <h4 className="text-lg font-black text-slate-700">اختر الورقة المناسبة</h4>
+                    <h4 className="text-lg font-black text-slate-700">اختر ورقة البيانات المناسبة</h4>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-2xl mx-auto">
                     {availableSheets.map(sheet => (
@@ -179,16 +193,21 @@ const StudentsManagement: React.FC<StudentsManagementProps> = ({ students, setSt
               )}
               {importStep === 'mapping' && (
                 <div className="space-y-8">
+                  <div className="bg-amber-50 p-4 rounded-xl border border-amber-100 text-amber-800 text-sm font-bold flex gap-3">
+                    <Settings2 size={20}/> تأكد من ربط حقل "الجوال" بشكل صحيح لضمان تفعيل تنبيهات الغياب.
+                  </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {['name', 'nationalId', 'grade', 'section', 'phone'].map(key => (
                       <div key={key} className="space-y-2">
-                        <label className="text-sm font-black text-slate-700 capitalize">{key === 'name' ? 'اسم الطالب' : key === 'nationalId' ? 'رقم الهوية' : key === 'grade' ? 'الصف' : key === 'section' ? 'الفصل' : 'الجوال'}</label>
+                        <label className="text-sm font-black text-slate-700 capitalize">
+                          {key === 'name' ? 'اسم الطالب' : key === 'nationalId' ? 'رقم الهوية' : key === 'grade' ? 'الصف' : key === 'section' ? 'الفصل' : 'رقم الجوال'}
+                        </label>
                         <select
                           value={fieldMapping[key]}
                           onChange={(e) => setFieldMapping({...fieldMapping, [key]: e.target.value})}
                           className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-indigo-500 font-bold"
                         >
-                          <option value="">-- اختر --</option>
+                          <option value="">-- اختر العمود من ملف Excel --</option>
                           {headers.map(h => <option key={h} value={h}>{h}</option>)}
                         </select>
                       </div>
@@ -197,17 +216,28 @@ const StudentsManagement: React.FC<StudentsManagementProps> = ({ students, setSt
                 </div>
               )}
               {importStep === 'preview' && (
-                <div className="border border-slate-100 rounded-3xl overflow-hidden shadow-sm">
-                   <table className="w-full text-right text-sm">
-                      <thead className="bg-slate-50 border-b border-slate-100">
-                        <tr><th className="p-4 font-black">الاسم</th><th className="p-4 font-black">الصف</th><th className="p-4 font-black">رقم الهوية</th></tr>
-                      </thead>
-                      <tbody>
-                        {previewData.slice(0, 10).map((s, i) => (
-                          <tr key={i}><td className="p-4 font-bold">{s.name}</td><td className="p-4">{s.grade}</td><td className="p-4 font-mono">{s.nationalId}</td></tr>
-                        ))}
-                      </tbody>
-                   </table>
+                <div className="space-y-4">
+                  <div className="text-sm font-bold text-slate-500">معاينة أول 10 طلاب (تأكد من ظهور رقم الجوال):</div>
+                  <div className="border border-slate-100 rounded-3xl overflow-hidden shadow-sm">
+                    <table className="w-full text-right text-sm">
+                        <thead className="bg-slate-50 border-b border-slate-100">
+                          <tr>
+                            <th className="p-4 font-black">الاسم</th>
+                            <th className="p-4 font-black">رقم الهوية</th>
+                            <th className="p-4 font-black">الجوال</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {previewData.slice(0, 10).map((s, i) => (
+                            <tr key={i} className="border-b border-slate-50">
+                              <td className="p-4 font-bold">{s.name}</td>
+                              <td className="p-4 font-mono">{s.nationalId}</td>
+                              <td className="p-4 text-emerald-600 font-bold">{s.phone || '---'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
             </div>
@@ -215,19 +245,25 @@ const StudentsManagement: React.FC<StudentsManagementProps> = ({ students, setSt
               <button onClick={resetImport} className="px-8 py-3 text-slate-500 font-black hover:bg-slate-200 rounded-2xl">إلغاء</button>
               {importStep === 'selecting_sheet' && <button onClick={proceedToMapping} className="px-10 py-3 bg-indigo-600 text-white font-black rounded-2xl">التالي</button>}
               {importStep === 'mapping' && <button onClick={proceedToPreview} className="px-10 py-3 bg-indigo-600 text-white font-black rounded-2xl">معاينة</button>}
-              {importStep === 'preview' && <button onClick={finalizeImport} className="px-10 py-3 bg-emerald-600 text-white font-black rounded-2xl">اعتماد</button>}
+              {importStep === 'preview' && <button onClick={finalizeImport} className="px-10 py-3 bg-emerald-600 text-white font-black rounded-2xl">اعتماد الاستيراد</button>}
             </div>
           </div>
         </div>
       )}
 
-      {/* Student Table View */}
+      {/* Main Students Table */}
       <div className="bg-white rounded-[2rem] shadow-sm border border-slate-200 overflow-hidden">
         <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row items-center justify-between gap-4 bg-slate-50/20">
           <div className="flex flex-wrap items-center gap-4 w-full md:w-auto">
             <div className="relative flex-1 md:w-80">
               <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <input type="text" placeholder="بحث باسم الطالب..." className="w-full pr-12 pl-4 py-3 bg-white border border-slate-200 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium" />
+              <input 
+                type="text" 
+                placeholder="بحث باسم الطالب أو الهوية..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pr-12 pl-4 py-3 bg-white border border-slate-200 rounded-2xl text-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all font-medium" 
+              />
             </div>
             <select value={filterGrade} onChange={(e) => setFilterGrade(e.target.value)} className="bg-white border border-slate-200 rounded-2xl text-sm px-6 py-3 font-bold text-slate-600">
               {grades.map(g => <option key={g} value={g}>{g}</option>)}
@@ -235,30 +271,57 @@ const StudentsManagement: React.FC<StudentsManagementProps> = ({ students, setSt
           </div>
           <div className="text-sm font-black bg-white px-6 py-3 rounded-2xl border border-slate-100 flex items-center gap-3">
             <Users size={18} className="text-indigo-500" />
-            <span className="text-slate-500">إجمالي الطلاب:</span>
-            <span className="text-indigo-600 text-lg">{filteredStudents.length}</span>
+            <span className="text-slate-500">إجمالي المعروض:</span>
+            <span className="text-indigo-600 text-lg">{processedStudents.length}</span>
           </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-right border-collapse">
             <thead>
               <tr className="bg-slate-50/50 text-slate-500 text-xs font-black border-b border-slate-100 uppercase tracking-widest">
-                <th className="p-6">اسم الطالب</th><th className="p-6">الهوية</th><th className="p-6">الصف/الفصل</th><th className="p-6 text-center">الإجراءات</th>
+                <th className="p-6">اسم الطالب</th>
+                <th className="p-6">الهوية</th>
+                <th className="p-6">الجوال</th>
+                <th className="p-6">الصف / الفصل</th>
+                <th className="p-6 text-center">الإجراءات</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredStudents.map((student) => (
+              {processedStudents.map((student) => (
                 <tr key={student.id} className="hover:bg-slate-50/50 group">
                   <td className="p-6 font-black text-slate-800 text-sm">{student.name}</td>
-                  <td className="p-6 font-mono text-xs">{student.nationalId}</td>
-                  <td className="p-6"><span className="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-xl text-[10px] font-black border border-indigo-100">{student.grade} / {student.section}</span></td>
+                  <td className="p-6 font-mono text-xs text-slate-500">{student.nationalId}</td>
+                  <td className="p-6">
+                    {student.phone ? (
+                      <div className="flex items-center gap-2 text-indigo-600 font-bold text-xs">
+                        <Phone size={14}/> {student.phone}
+                      </div>
+                    ) : (
+                      <span className="text-slate-300 text-[10px] font-bold">لا يوجد رقم</span>
+                    )}
+                  </td>
+                  <td className="p-6">
+                    <span className="px-3 py-1 bg-indigo-50 text-indigo-700 rounded-xl text-[10px] font-black border border-indigo-100">
+                      {student.grade} / {student.section}
+                    </span>
+                  </td>
                   <td className="p-6 text-center">
-                    <button onClick={() => setStudents(prev => prev.filter(s => s.id !== student.id))} className="p-3 hover:bg-red-50 rounded-xl text-red-400 opacity-0 group-hover:opacity-100"><Trash2 size={18} /></button>
+                    <button 
+                      onClick={() => setStudents(prev => prev.filter(s => s.id !== student.id))} 
+                      className="p-3 hover:bg-red-50 rounded-xl text-red-400 opacity-0 group-hover:opacity-100 transition-all"
+                    >
+                      <Trash2 size={18} />
+                    </button>
                   </td>
                 </tr>
               ))}
-              {filteredStudents.length === 0 && (
-                <tr><td colSpan={4} className="p-32 text-center text-slate-300 font-bold">قاعدة بيانات الطلاب فارغة</td></tr>
+              {processedStudents.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="p-32 text-center text-slate-300 font-bold flex flex-col items-center gap-4">
+                    <Users size={48} strokeWidth={1}/>
+                    <span>لم يتم العثور على طلاب مطابقين</span>
+                  </td>
+                </tr>
               )}
             </tbody>
           </table>

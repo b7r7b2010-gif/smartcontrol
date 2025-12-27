@@ -24,15 +24,20 @@ export type Committee = {
   name: string;
   roomName: string;
   capacity: number;
-  assignedTeacherIds: string[];
+  assignedTeacherIds: string[]; // This might become per-session assignment
   studentIds: string[];
   examDayId?: string;
 };
 
-export type ExamDay = {
+export type ExamPeriod = {
   id: string;
   date: string;
-  subject: string;
+  dayName: string;
+  periodName: 'الفترة الأولى' | 'الفترة الثانية';
+  startTime: string;
+  endTime: string;
+  isActive: boolean;
+  subjects: Record<string, string>; // Mapping grade level to subject name
 };
 
 export type AttendanceLog = {

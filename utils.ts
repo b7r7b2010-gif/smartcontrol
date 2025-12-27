@@ -3,35 +3,35 @@ import { Student, Committee, Teacher } from './types';
 import * as XLSX from 'xlsx';
 
 /**
- * ترتيب الطلاب أبجدياً بناءً على الاسم
- */
-export const sortStudentsAlphabetically = (students: Student[]): Student[] => {
-  return [...students].sort((a, b) => a.name.localeCompare(b.name, 'ar'));
-};
-
-/**
  * ترتيب ذكي للمراحل الدراسية (أول ثانوي -> ثاني ثانوي -> ثالث ثانوي)
+ * مع ترتيب أبجدي للأسماء داخل كل مرحلة
  */
 export const sortByGradeLevel = (students: Student[]): Student[] => {
   const gradeOrder: { [key: string]: number } = {
-    'اول': 1, 'أول': 1, '1': 1,
-    'ثاني': 2, '2': 2,
-    'ثالث': 3, '3': 3
+    'اول': 1, 'أول': 1, '1': 1, 'primary_1': 1,
+    'ثاني': 2, '2': 2, 'primary_2': 2,
+    'ثالث': 3, '3': 3, 'primary_3': 3,
+    'رابع': 4, '4': 4,
+    'خامس': 5, '5': 5,
+    'سادس': 6, '6': 6
   };
 
   const getWeight = (grade: string) => {
+    const g = String(grade).toLowerCase();
     for (const key in gradeOrder) {
-      if (grade.includes(key)) return gradeOrder[key];
+      if (g.includes(key)) return gradeOrder[key];
     }
-    return 99; // للمراحل غير المعروفة
+    return 99; 
   };
 
   return [...students].sort((a, b) => {
     const weightA = getWeight(a.grade);
     const weightB = getWeight(b.grade);
     
+    // أولاً: الترتيب حسب الصف
     if (weightA !== weightB) return weightA - weightB;
-    // إذا كانت نفس المرحلة، نرتب أبجدياً
+    
+    // ثانياً: الترتيب الأبجدي داخل نفس الصف
     return a.name.localeCompare(b.name, 'ar');
   });
 };
@@ -67,18 +67,23 @@ export const parseExcelFile = async (file: File): Promise<any[]> => {
 };
 
 /**
- * وظيفة لتحويل البيانات الخام بناءً على خريطة الحقول المحددة من قبل المستخدم
+ * دالة محسنة لاستيراد الطلاب مع ضمان جودة البيانات ورقم الجوال
  */
 export const mapFieldsToStudents = (data: any[], mapping: Record<string, string>): Student[] => {
-  return data.map(row => ({
-    id: generateId(),
-    nationalId: String(row[mapping.nationalId] || ''),
-    name: String(row[mapping.name] || ''),
-    grade: String(row[mapping.grade] || 'غير محدد'),
-    section: String(row[mapping.section] || '1'),
-    phone: String(row[mapping.phone] || ''),
-    status: 'present' as const
-  })).filter(s => s.name.length > 2);
+  return data.map(row => {
+    // محاولة جلب القيمة سواء كان الحقل نصياً أو رقماً في الإكسل
+    const getVal = (key: string) => row[mapping[key]] !== undefined ? String(row[mapping[key]]).trim() : '';
+    
+    return {
+      id: generateId(),
+      nationalId: getVal('nationalId'),
+      name: getVal('name'),
+      grade: getVal('grade') || 'غير محدد',
+      section: getVal('section') || '1',
+      phone: getVal('phone'),
+      status: 'present' as const
+    };
+  }).filter(s => s.name.length > 2);
 };
 
 export const mapExcelToTeachers = (data: any[]): Teacher[] => {
