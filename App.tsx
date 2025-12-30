@@ -1,16 +1,12 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   Users, 
   LayoutGrid, 
   UserSquare2, 
-  CalendarDays, 
   Printer, 
-  QrCode, 
   ClipboardCheck, 
   LayoutDashboard,
   Bell,
-  Search,
   Cloud,
   CloudOff,
   Calendar
@@ -24,23 +20,9 @@ import LiveExamView from './views/LiveExamView';
 import PrintingCenter from './views/PrintingCenter';
 import ExamScheduleManager from './views/ExamScheduleManager';
 
-// Firebase Imports
-import { initializeApp } from "firebase/app";
-import { getDatabase, ref, onValue, set } from "firebase/database";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyA-zjjTrXJdXIX0z4SjGFwlu09KTZAZGRk",
-  authDomain: "samrtcontrol.firebaseapp.com",
-  projectId: "samrtcontrol",
-  databaseURL: "https://samrtcontrol-default-rtdb.firebaseio.com",
-  storageBucket: "samrtcontrol.firebasestorage.app",
-  messagingSenderId: "780118753476",
-  appId: "1:780118753476:web:99061878f7909aa381c991"
-};
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
+// Firebase Import from Central Config
+import { db } from './lib/firebase';
+import { ref, onValue, set, off } from "firebase/database";
 
 const cleanForFirebase = (obj: any) => {
   return JSON.parse(JSON.stringify(obj, (key, value) => 
@@ -58,12 +40,11 @@ const App: React.FC = () => {
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    const handleSwitchTab = (e: any) => setActiveTab(e.detail);
-    window.addEventListener('switchTab', handleSwitchTab);
-    return () => window.removeEventListener('switchTab', handleSwitchTab);
-  }, []);
+    if (!db) {
+      console.warn("Realtime Database service is not available yet.");
+      return;
+    }
 
-  useEffect(() => {
     const studentsRef = ref(db, 'students');
     const teachersRef = ref(db, 'teachers');
     const committeesRef = ref(db, 'committees');
@@ -73,6 +54,9 @@ const App: React.FC = () => {
       const val = snapshot.val();
       setStudents(Array.isArray(val) ? val : []);
       setIsConnected(true);
+    }, (err) => {
+      console.warn("Realtime Database Sync Error:", err);
+      setIsConnected(false);
     });
 
     const unsubTeachers = onValue(teachersRef, (snapshot) => {
@@ -91,31 +75,35 @@ const App: React.FC = () => {
     });
 
     return () => {
-      unsubStudents();
-      unsubTeachers();
-      unsubCommittees();
-      unsubExamPeriods();
+      off(studentsRef);
+      off(teachersRef);
+      off(committeesRef);
+      off(examPeriodsRef);
     };
   }, []);
 
   const syncStudents = (newData: Student[] | ((prev: Student[]) => Student[])) => {
     const value = typeof newData === 'function' ? newData(students) : newData;
-    set(ref(db, 'students'), cleanForFirebase(value));
+    setStudents(value);
+    if (db) set(ref(db, 'students'), cleanForFirebase(value)).catch(e => console.error("Save Error:", e));
   };
 
   const syncTeachers = (newData: Teacher[] | ((prev: Teacher[]) => Teacher[])) => {
     const value = typeof newData === 'function' ? newData(teachers) : newData;
-    set(ref(db, 'teachers'), cleanForFirebase(value));
+    setTeachers(value);
+    if (db) set(ref(db, 'teachers'), cleanForFirebase(value)).catch(e => console.error("Save Error:", e));
   };
 
   const syncCommittees = (newData: Committee[] | ((prev: Committee[]) => Committee[])) => {
     const value = typeof newData === 'function' ? newData(committees) : newData;
-    set(ref(db, 'committees'), cleanForFirebase(value));
+    setCommittees(value);
+    if (db) set(ref(db, 'committees'), cleanForFirebase(value)).catch(e => console.error("Save Error:", e));
   };
 
   const syncExamPeriods = (newData: ExamPeriod[] | ((prev: ExamPeriod[]) => ExamPeriod[])) => {
     const value = typeof newData === 'function' ? newData(examPeriods) : newData;
-    set(ref(db, 'examPeriods'), cleanForFirebase(value));
+    setExamPeriods(value);
+    if (db) set(ref(db, 'examPeriods'), cleanForFirebase(value)).catch(e => console.error("Save Error:", e));
   };
 
   const renderContent = () => {
@@ -133,7 +121,7 @@ const App: React.FC = () => {
 
   return (
     <div className="flex min-h-screen bg-slate-50 text-slate-900 font-sans">
-      <aside className="w-64 bg-slate-900 text-white flex-shrink-0 flex flex-col no-print transition-all border-l border-slate-800">
+      <aside className="w-64 bg-slate-900 text-white flex-shrink-0 flex flex-col no-print border-l border-slate-800 shadow-2xl">
         <div className="p-8 flex items-center gap-3">
           <div className="bg-indigo-500 p-2.5 rounded-2xl shadow-lg shadow-indigo-500/20">
             <LayoutGrid size={24} />
@@ -154,37 +142,33 @@ const App: React.FC = () => {
         <div className="p-6 border-t border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
             {isConnected ? <Cloud className="text-emerald-400" size={16} /> : <CloudOff className="text-red-400" size={16} />}
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{isConnected ? 'Cloud Synced' : 'Offline'}</span>
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{isConnected ? 'Cloud Active' : 'Offline Mode'}</span>
           </div>
-          <span className="text-[10px] text-slate-600 font-black">V 3.1</span>
+          <span className="text-[10px] text-slate-600 font-black">V 3.9</span>
         </div>
       </aside>
 
       <main className="flex-1 flex flex-col min-w-0 h-screen overflow-y-auto">
         <header className="h-20 bg-white/80 backdrop-blur-md border-b border-slate-200 flex items-center justify-between px-10 sticky top-0 z-10 no-print">
           <div className="flex items-center gap-4 flex-1 max-w-xl">
-            <div className="relative w-full">
-              <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <input 
-                type="text" 
-                placeholder="ابحث عن طالب، لجنة، أو ملاحظ..." 
-                className="w-full pr-12 pl-4 py-3 bg-slate-100 border-none rounded-2xl text-sm focus:ring-2 focus:ring-indigo-500 transition-all outline-none font-medium text-right"
-              />
-            </div>
+             <div className="text-sm font-bold text-slate-400">نظام الإدارة الموحد - إدارة الكنترول</div>
           </div>
+          {!db && (
+            <div className="mx-4 px-3 py-1 bg-red-100 text-red-700 text-xs font-bold rounded-lg border border-red-200 animate-pulse">
+              خطأ في الربط السحابي: الخدمة غير متاحة
+            </div>
+          )}
           <div className="flex items-center gap-6">
-            <button className="relative p-2.5 text-slate-400 hover:bg-slate-100 rounded-xl transition-colors">
+            <button className="relative p-2.5 text-slate-400 hover:bg-slate-100 rounded-xl transition-all">
               <Bell size={22} />
               <span className="absolute top-2.5 right-2.5 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
             </button>
-            <div className="flex items-center gap-3 border-r pr-6 border-slate-100">
-               <div className="text-right hidden md:block">
-                  <div className="text-xs font-black text-slate-800">إدارة الكنترول</div>
-                  <div className="text-[10px] font-bold text-emerald-500 uppercase">Administrator</div>
-               </div>
-               <div className="w-10 h-10 rounded-2xl bg-indigo-600 flex items-center justify-center text-white font-black shadow-lg shadow-indigo-200">
-                A
+            <div className="flex items-center gap-3">
+              <div className="text-left">
+                <div className="text-[10px] font-black text-slate-400 text-right uppercase">Welcome</div>
+                <div className="text-xs font-bold text-slate-800">أدمن النظام</div>
               </div>
+              <div className="w-10 h-10 rounded-2xl bg-indigo-600 flex items-center justify-center text-white font-black shadow-lg shadow-indigo-100">A</div>
             </div>
           </div>
         </header>
