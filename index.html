@@ -3,44 +3,45 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>نظام إدارة الاختبارات الذكي</title>
+    <title>كنترول بلس - نظام الإدارة المتكامل</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;900&display=swap" rel="stylesheet">
     <style>
       body {
         font-family: 'Tajawal', sans-serif;
-        background-color: #f8fafc;
+        background-color: #0f172a;
       }
-      @media print {
-        .no-print { display: none !important; }
-        .print-only { display: block !important; }
-        @page { margin: 0; }
-        body { background-color: white; }
+      .glass-card {
+        background: rgba(255, 255, 255, 0.03);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
       }
-      ::-webkit-scrollbar { width: 6px; }
-      ::-webkit-scrollbar-track { background: #f1f1f1; }
-      ::-webkit-scrollbar-thumb { background: #c7d2fe; border-radius: 10px; }
-      ::-webkit-scrollbar-thumb:hover { background: #818cf8; }
+      .status-glow-present { box-shadow: 0 0 15px rgba(16, 185, 129, 0.4); }
+      .status-glow-absent { box-shadow: 0 0 15px rgba(239, 68, 68, 0.4); }
+      @keyframes pulse-red {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.05); opacity: 0.8; }
+      }
+      .animate-alert { animation: pulse-red 2s infinite; }
+      @media print { .no-print { display: none !important; } }
     </style>
-  <script type="importmap">
+    <script type="importmap">
 {
   "imports": {
     "react": "https://esm.sh/react@19.0.0",
+    "react/": "https://esm.sh/react@19.0.0/",
     "react-dom": "https://esm.sh/react-dom@19.0.0",
+    "react-dom/": "https://esm.sh/react-dom@19.0.0/",
     "react-dom/client": "https://esm.sh/react-dom@19.0.0/client",
     "lucide-react": "https://esm.sh/lucide-react@0.460.0",
     "qrcode.react": "https://esm.sh/qrcode.react@4.1.0",
     "xlsx": "https://esm.sh/xlsx@0.18.5",
-    "firebase/app": "https://esm.sh/firebase@11.1.0/app",
-    "firebase/database": "https://esm.sh/firebase@11.1.0/database",
-    "firebase/auth": "https://esm.sh/firebase@11.1.0/auth",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "react/": "https://esm.sh/react@^19.2.3/",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2.47.10",
     "firebase/": "https://esm.sh/firebase@^12.7.0/"
   }
 }
 </script>
-<link rel="stylesheet" href="/index.css">
+  <link rel="stylesheet" href="/index.css">
 </head>
   <body>
     <div id="root"></div>
